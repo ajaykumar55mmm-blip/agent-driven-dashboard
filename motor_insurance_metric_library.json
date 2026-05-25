@@ -1,0 +1,55 @@
+{
+  "table": "motor_insurance_claims",
+  "metrics": [
+    {
+      "name": "Total Claims",
+      "dax": "SUM(motor_insurance_claims[claim_amount])",
+      "status": "approved"
+    },
+    {
+      "name": "Total Premium",
+      "dax": "SUM(motor_insurance_claims[premium])",
+      "status": "approved"
+    },
+    {
+      "name": "Loss Ratio",
+      "dax": "DIVIDE([Total Claims], [Total Premium])",
+      "status": "approved"
+    },
+    {
+      "name": "Average Claim Cost",
+      "dax": "AVERAGE(motor_insurance_claims[claim_amount])",
+      "status": "approved"
+    },
+    {
+      "name": "Total Repair Cost",
+      "dax": "SUM(motor_insurance_claims[repair_cost])",
+      "status": "approved"
+    },
+    {
+      "name": "Total Loss Claims Count",
+      "dax": "CALCULATE(COUNTROWS(motor_insurance_claims), motor_insurance_claims[total_loss_flag] = 1)",
+      "status": "approved"
+    },
+    {
+      "name": "Open Claims Count",
+      "dax": "CALCULATE(COUNTROWS(motor_insurance_claims), motor_insurance_claims[claim_status] = \"Open\")",
+      "status": "approved"
+    },
+    {
+      "name": "Closed Claims Count",
+      "dax": "CALCULATE(COUNTROWS(motor_insurance_claims), motor_insurance_claims[claim_status] = \"Closed\")",
+      "status": "approved"
+    },
+    {
+      "name": "Claim Frequency",
+      "dax": "COUNT(motor_insurance_claims[claim_id])",
+      "status": "approved"
+    },
+    {
+      "name": "High Severity Claims",
+      "dax": "CALCULATE(COUNTROWS(motor_insurance_claims), motor_insurance_claims[claim_amount] > 5000)",
+      "status": "unverified"
+    }
+  ]
+}
