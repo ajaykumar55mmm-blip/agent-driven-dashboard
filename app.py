@@ -7,8 +7,7 @@ import json
 
 load_dotenv()
 
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-
+client = OpenAI(base_url="http://localhost:11434/v1", api_key="ollama")
 
 
 
@@ -67,7 +66,7 @@ Only use metrics from the approved list. Only use columns from the data.
 """
 
 response = client.chat.completions.create(
-    model="gpt-4o",
+    model="mistral",
     messages=[
         {"role": "system", "content": system_prompt},
         {"role": "user", "content": user_prompt}
@@ -80,47 +79,36 @@ import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
-# Parse the agent response
-try:
-    plan = json.loads(agent_output)
-except:
-    # Remove markdown code blocks if present
-    cleaned = agent_output.replace("```json", "").replace("```", "").strip()
-    plan = json.loads(cleaned)
+import re
+
+# Extract JSON from Mistral's response
+json_match = re.search(r'\{.*?\}', agent_output, re.DOTALL)
+if json_match:
+    plan = json.loads(json_match.group())
+else:
+    plan = {
+        "metrics": ["Total Claims", "Average Claim Cost", "Loss Ratio"],
+        "breakdowns": ["state", "claim_date"],
+        "visuals": ["KPI", "trend"]
+    }
 
 print("Dashboard plan:", plan)
 
 # Calculate the metrics from the data
 figures = []
 
-# KPI cards
-for metric in plan.get("metrics", []):
-    if metric == "Total Claims":
-        value = df["claim_amount"].sum()
-        fig = go.Figure(go.Indicator(
-            mode="number",
-            value=value,
-            title={"text": "Total Claims"}
-        ))
-        figures.append(fig)
+# KPI cards - always calculate all three regardless of Mistral's wording
+loss_ratio = round(df["claim_amount"].sum() / df["premium"].sum(), 4)
+fig1 = go.Figure(go.Indicator(mode="number", value=loss_ratio, title={"text": "Loss Ratio"}))
+figures.append(fig1)
 
-    elif metric == "Average Claim Cost":
-        value = df["claim_amount"].mean()
-        fig = go.Figure(go.Indicator(
-            mode="number",
-            value=round(value, 2),
-            title={"text": "Average Claim Cost"}
-        ))
-        figures.append(fig)
+total_claims = df["claim_amount"].sum()
+fig2 = go.Figure(go.Indicator(mode="number", value=total_claims, title={"text": "Total Claims"}))
+figures.append(fig2)
 
-    elif metric == "Loss Ratio":
-        value = df["claim_amount"].sum() / df["premium"].sum()
-        fig = go.Figure(go.Indicator(
-            mode="number",
-            value=round(value, 4),
-            title={"text": "Loss Ratio"}
-        ))
-        figures.append(fig)
+avg_cost = round(df["claim_amount"].mean(), 2)
+fig3 = go.Figure(go.Indicator(mode="number", value=avg_cost, title={"text": "Average Claim Cost"}))
+figures.append(fig3)
 
 # Trend chart by state
 if "state" in plan.get("breakdowns", []):
@@ -130,28 +118,49 @@ if "state" in plan.get("breakdowns", []):
 
 # Trend chart by date
 if "claim_date" in plan.get("breakdowns", []):
-    df["claim_date"] = pd.to_datetime(df["claim_date"])
+    df["claim_date"] = pd.to_datetime(df["claim_date"], dayfirst=True)
     date_df = df.groupby("claim_date")["claim_amount"].sum().reset_index()
     fig = px.line(date_df, x="claim_date", y="claim_amount", title="Claims Trend Over Time")
     figures.append(fig)
 
-# Build final HTML dashboard
+# Build professional HTML dashboard
+import webbrowser
+
 html_parts = []
 for fig in figures:
     html_parts.append(fig.to_html(full_html=False, include_plotlyjs='cdn'))
 
+# Separate KPI cards from charts
+kpi_html = "".join([f'<div class="kpi-card">{p}</div>' for p in html_parts[:3]])
+chart_html = "".join([f'<div class="chart-card">{p}</div>' for p in html_parts[3:]])
+
 final_html = f"""
+<!DOCTYPE html>
 <html>
-<head><title>Motor Insurance Dashboard</title>
-<style>
-    body {{ font-family: Arial; background: #f4f4f4; padding: 20px; }}
-    h1 {{ color: #1F3A6E; }}
-    .chart {{ background: white; padding: 20px; margin: 20px 0; border-radius: 8px; }}
-</style>
+<head>
+    <title>Motor Insurance Claims Dashboard</title>
+    <style>
+        * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+        body {{ font-family: 'Segoe UI', Arial, sans-serif; background: #f0f2f5; padding: 24px; }}
+        .header {{ background: #1F3A6E; color: white; padding: 24px 32px; border-radius: 12px; margin-bottom: 24px; }}
+        .header h1 {{ font-size: 24px; font-weight: 600; }}
+        .header p {{ font-size: 13px; opacity: 0.75; margin-top: 4px; }}
+        .kpi-row {{ display: flex; gap: 16px; margin-bottom: 24px; }}
+        .kpi-card {{ flex: 1; background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.07); }}
+        .chart-card {{ background: white; border-radius: 12px; padding: 20px; margin-bottom: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.07); }}
+        .footer {{ text-align: center; font-size: 12px; color: #999; margin-top: 8px; }}
+    </style>
 </head>
 <body>
-<h1>Motor Insurance Claims Dashboard</h1>
-{''.join([f'<div class="chart">{c}</div>' for c in html_parts])}
+    <div class="header">
+        <h1>Motor Insurance Claims Dashboard</h1>
+        <p>Powered by Mistral AI running locally via Ollama</p>
+    </div>
+    <div class="kpi-row">
+        {kpi_html}
+    </div>
+    {chart_html}
+    <div class="footer">Generated by agent-driven-dashboard | Data processed locally | No data sent to cloud</div>
 </body>
 </html>
 """
@@ -160,4 +169,5 @@ with open("dashboard.html", "w") as f:
     f.write(final_html)
 
 print("Dashboard saved as dashboard.html")
-print("Open it in your browser to view.")
+webbrowser.open("dashboard.html")
+print("Opening dashboard in browser...")
