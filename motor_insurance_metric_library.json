@@ -1,55 +1,70 @@
 {
-  "table": "motor_insurance_claims",
+  "version": "1.0",
+  "domain": "motor_insurance",
   "metrics": [
     {
+      "name": "Loss Ratio",
+      "status": "approved",
+      "description": "Total claims paid divided by total premiums earned",
+      "dax": "DIVIDE(SUM(claim_amount), SUM(premium))",
+      "format": "percentage",
+      "owner": "Actuarial"
+    },
+    {
       "name": "Total Claims",
-      "dax": "SUM(motor_insurance_claims[claim_amount])",
-      "status": "approved"
+      "status": "approved",
+      "description": "Sum of all claim amounts in the selected period",
+      "dax": "SUM(claim_amount)",
+      "format": "currency",
+      "owner": "Claims"
+    },
+    {
+      "name": "Avg Claim Cost",
+      "status": "approved",
+      "description": "Average cost per claim",
+      "dax": "AVERAGE(claim_amount)",
+      "format": "currency",
+      "owner": "Claims"
+    },
+    {
+      "name": "Claim Count",
+      "status": "approved",
+      "description": "Total number of claims lodged",
+      "dax": "COUNTROWS(claims)",
+      "format": "number",
+      "owner": "Claims"
     },
     {
       "name": "Total Premium",
-      "dax": "SUM(motor_insurance_claims[premium])",
-      "status": "approved"
+      "status": "approved",
+      "description": "Total gross written premium",
+      "dax": "SUM(premium)",
+      "format": "currency",
+      "owner": "Underwriting"
     },
     {
-      "name": "Loss Ratio",
-      "dax": "DIVIDE([Total Claims], [Total Premium])",
-      "status": "approved"
+      "name": "Frequency Rate",
+      "status": "approved",
+      "description": "Number of claims per policy",
+      "dax": "DIVIDE(COUNTROWS(claims), DISTINCTCOUNT(policy_id))",
+      "format": "decimal",
+      "owner": "Actuarial"
     },
     {
-      "name": "Average Claim Cost",
-      "dax": "AVERAGE(motor_insurance_claims[claim_amount])",
-      "status": "approved"
+      "name": "Avg Settlement Days",
+      "status": "draft",
+      "description": "Average number of days to settle a claim",
+      "dax": "AVERAGE(settlement_days)",
+      "format": "number",
+      "owner": "Claims"
     },
     {
-      "name": "Total Repair Cost",
-      "dax": "SUM(motor_insurance_claims[repair_cost])",
-      "status": "approved"
-    },
-    {
-      "name": "Total Loss Claims Count",
-      "dax": "CALCULATE(COUNTROWS(motor_insurance_claims), motor_insurance_claims[total_loss_flag] = 1)",
-      "status": "approved"
-    },
-    {
-      "name": "Open Claims Count",
-      "dax": "CALCULATE(COUNTROWS(motor_insurance_claims), motor_insurance_claims[claim_status] = \"Open\")",
-      "status": "approved"
-    },
-    {
-      "name": "Closed Claims Count",
-      "dax": "CALCULATE(COUNTROWS(motor_insurance_claims), motor_insurance_claims[claim_status] = \"Closed\")",
-      "status": "approved"
-    },
-    {
-      "name": "Claim Frequency",
-      "dax": "COUNT(motor_insurance_claims[claim_id])",
-      "status": "approved"
-    },
-    {
-      "name": "High Severity Claims",
-      "dax": "CALCULATE(COUNTROWS(motor_insurance_claims), motor_insurance_claims[claim_amount] > 5000)",
-      "status": "unverified"
+      "name": "Reopened Claims Rate",
+      "status": "draft",
+      "description": "Percentage of claims reopened after closure",
+      "dax": "DIVIDE(COUNTROWS(FILTER(claims, claims[reopened]=TRUE)), COUNTROWS(claims))",
+      "format": "percentage",
+      "owner": "Claims"
     }
   ]
 }

@@ -289,7 +289,8 @@ def build_kpi(label: str, value, prefix="", suffix="", delta=None):
         title={"text": f"<span style='font-size:12px;color:#6B7280;text-transform:uppercase;letter-spacing:0.06em'>{label}</span>"},
         number={"font": {"size": 42, "color": "#F9FAFB", "family": "DM Sans"}},
     ))
-    fig.update_layout(**PLOTLY_DARK, height=180)
+    kpi_layout = {k: v for k, v in PLOTLY_DARK.items() if k != "height"}
+    fig.update_layout(**kpi_layout, height=180)
     return fig
 
 def auto_calculate_metrics(df: pd.DataFrame, metrics: list, library: dict) -> list:
