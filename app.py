@@ -309,6 +309,19 @@ def call_ai(system_prompt, messages, ai_mode, api_key, ollama_model):
         client = anthropic.Anthropic(api_key=api_key)
         resp = client.messages.create(model="claude-sonnet-4-20250514", max_tokens=4000, system=system_prompt, messages=history)
         return resp.content[0].text.strip()
+    elif ai_mode == "Gemini":
+        from google import genai as google_genai
+        client = google_genai.Client(api_key=api_key)
+        combined = "\n\n".join(
+            f"{'User' if m['role']=='user' else 'Assistant'}: {m['content']}"
+            for m in messages
+        )
+        full_prompt = f"{system_prompt}\n\n{combined}"
+        resp = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=full_prompt
+        )
+        return resp.text.strip()
     else:
         from openai import OpenAI
         base = "http://localhost:11434/v1" if ai_mode=="Ollama (local)" else "https://api.openai.com/v1"
@@ -431,15 +444,17 @@ with st.sidebar:
 
     # ── AI engine ──────────────────────────────────────────────────────────────
     st.markdown('<p class="section-label">AI Engine</p>', unsafe_allow_html=True)
-    ai_mode = st.selectbox("AI Engine", ["Ollama (local)","Claude API","OpenAI"], label_visibility="collapsed")
+    ai_mode = st.selectbox("AI Engine", ["Ollama (local)","Claude API","OpenAI","Gemini"], label_visibility="collapsed")
     api_key = ""; ollama_model = "mistral"
     if ai_mode == "Ollama (local)":
         ollama_model = st.text_input("Model", value="mistral", label_visibility="collapsed")
         st.markdown(f'<div class="info-box">🔒 All data stays on your machine.</div>', unsafe_allow_html=True)
     elif ai_mode == "Claude API":
         api_key = st.text_input("Claude API Key", type="password", placeholder="sk-ant-...", label_visibility="collapsed")
-    else:
+    elif ai_mode == "OpenAI":
         api_key = st.text_input("OpenAI API Key", type="password", placeholder="sk-...", label_visibility="collapsed")
+    else:
+        api_key = st.text_input("Gemini API Key", type="password", placeholder="AIza...", label_visibility="collapsed")
 
     st.markdown('<hr class="soft">', unsafe_allow_html=True)
 
@@ -687,7 +702,8 @@ if pages and active_idx < len(pages):
                             st.session_state.pages = pages; st.rerun()
 
             if width == "full":
-                render_with_controls(cfg, i, st)
+                full_col = st.container()
+                render_with_controls(cfg, i, full_col)
                 i += 1
             elif width == "third":
                 group = []
